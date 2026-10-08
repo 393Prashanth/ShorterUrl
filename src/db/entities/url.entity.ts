@@ -3,7 +3,6 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  Index,
 } from 'typeorm';
 
 @Entity('urls')
@@ -14,7 +13,6 @@ export class UrlEntity {
   @Column({ name: 'original_url', type: 'text' })
   originalUrl: string;
 
-  @Index({ unique: true })
   @Column({ name: 'short_code', type: 'varchar', length: 16, unique: true })
   shortCode: string;
 
@@ -27,9 +25,9 @@ export class UrlEntity {
   @Column({ name: 'last_accessed', type: 'timestamp', nullable: true })
   lastAccessed: Date | null;
 
-  @Column({name:'expires_at', type:'timestamp', nullable:true})
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
-  @Column({name:'is_active', type:'boolean', default:true})
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 }

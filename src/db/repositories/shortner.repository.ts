@@ -34,8 +34,17 @@ export class ShortnerRepository {
     });
   }
 
-  async findAll(): Promise<UrlEntity[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+  async findAll(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ data: UrlEntity[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.repo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return { data, total };
   }
 
   async deleteById(id: string): Promise<boolean> {

@@ -6,9 +6,11 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ShortnerService } from '../core/shortner/services/shortner.service';
 
+@ApiTags('Redirect')
 @Controller()
 export class RedirectController {
   constructor(private readonly shortnerService: ShortnerService) {}

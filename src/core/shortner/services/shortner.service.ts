@@ -10,6 +10,7 @@ import { ShortnerRepository } from '../../../db/repositories';
 import { UrlEntity } from '../../../db/entities';
 import { CreateUrlDto } from '../../../definitions/dto/request';
 import { UrlResponse } from '../../../definitions/dto/response';
+import { SHORT_CODE_LENGTH } from '../../../shared/utils';
 
 @Injectable()
 export class ShortnerService {
@@ -26,21 +27,71 @@ export class ShortnerService {
   // 1. Create Short URL
   async shortenUrl(dto: CreateUrlDto): Promise<UrlResponse> {
     const { originalUrl, customSlug, expiresAt } = dto;
-    const code = customSlug ? customSlug.trim() : nanoid(6);
 
-    const existing = await this.shortnerRepository.findByShortCode(code);
-    if (existing) {
-      throw new ConflictException(
-        'This custom alias or short code is already in use. Please choose another.',
-      );
+    if (customSlug) {
+      const code = customSlug.trim();
+      const existing = await this.shortnerRepository.findByShortCode(code);
+      if (existing) {
+        throw new ConflictException(
+          'This custom alias is already in use. Please choose another.',
+        );
+      }
+
+      try {
+        const record = await this.shortnerRepository.createUrl(
+          originalUrl,
+          code,
+          expiresAt,
+        );
+        return this.formatResponse(record);
+      } catch (error: unknown) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code: string }).code === '23505'
+        ) {
+          throw new ConflictException(
+            'This custom alias is already in use. Please choose another.',
+          );
+        }
+        throw error;
+      }
     }
 
-    const record = await this.shortnerRepository.createUrl(
-      originalUrl,
-      code,
-      expiresAt,
+    // Auto-generate slug with collision retry
+    const maxRetries = 3;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const code = nanoid(SHORT_CODE_LENGTH);
+      const existing = await this.shortnerRepository.findByShortCode(code);
+      if (existing) {
+        continue;
+      }
+
+      try {
+        const record = await this.shortnerRepository.createUrl(
+          originalUrl,
+          code,
+          expiresAt,
+        );
+        return this.formatResponse(record);
+      } catch (error: unknown) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code: string }).code === '23505' &&
+          attempt < maxRetries - 1
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new ConflictException(
+      'Failed to generate unique short code. Please try again.',
     );
-    return this.formatResponse(record);
   }
 
   // 2. Resolve Short URL & Track Click
@@ -62,10 +113,29 @@ export class ShortnerService {
     return record.originalUrl;
   }
 
-  // 3. List All URLs
-  async getAllUrls(): Promise<UrlResponse[]> {
-    const records = await this.shortnerRepository.findAll();
-    return records.map((record) => this.formatResponse(record));
+  // 3. List All URLs with pagination
+  async getAllUrls(page: number = 1, limit: number = 20) {
+    // Sanitize values to prevent negative or overly large limits
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(100, Math.max(1, limit));
+
+    const { data, total } = await this.shortnerRepository.findAll(
+      safePage,
+      safeLimit,
+    );
+    const totalPages = Math.ceil(total / safeLimit) || 1;
+
+    return {
+      data: data.map((record) => this.formatResponse(record)),
+      meta: {
+        total,
+        page: safePage,
+        limit: safeLimit,
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPrevPage: safePage > 1,
+      },
+    };
   }
 
   // 4. Get Stats for Single URL

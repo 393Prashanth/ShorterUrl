@@ -7,36 +7,44 @@ import {
   Param,
   HttpStatus,
   HttpCode,
+  ParseIntPipe,
+  Query,
+  DefaultValuePipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ShortnerService } from '../../../core/shortner/services/shortner.service';
 import { CreateUrlDto } from '../../../definitions/dto/request';
 
+@ApiTags('Shortener')
 @Controller('api/v1')
 export class ShortnerController {
   constructor(private readonly shortnerService: ShortnerService) {}
 
-  // 1. POST /api/v1/shorten -> Create Short URL
+  /** Create a new shortened URL */
   @Post('shorten')
   @HttpCode(HttpStatus.CREATED)
   async shorten(@Body() dto: CreateUrlDto) {
     return this.shortnerService.shortenUrl(dto);
   }
 
-  // 2. GET /api/v1/urls -> List All URLs
+  /** List shortened URLs with pagination */
   @Get('urls')
-  async getAll() {
-    return this.shortnerService.getAllUrls();
+  async getAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.shortnerService.getAllUrls(page, limit);
   }
 
-  // 3. GET /api/v1/urls/:code/stats -> Get Stats
+  /** Get click analytics for a specific short code */
   @Get('urls/:code/stats')
   async getStats(@Param('code') code: string) {
     return this.shortnerService.getStats(code);
   }
 
-  // 4. DELETE /api/v1/urls/:id -> Delete URL
+  /** Delete a shortened URL by numeric ID */
   @Delete('urls/:id')
-  async delete(@Param('id') id: string) {
-    return this.shortnerService.deleteUrl(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.shortnerService.deleteUrl(String(id));
   }
 }
