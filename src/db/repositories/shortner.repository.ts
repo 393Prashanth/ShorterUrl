@@ -1,7 +1,7 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UrlEntity } from '../entities/url.entity';
+import { UrlEntity } from '../entities';
 
 @Injectable()
 export class ShortnerRepository {
@@ -14,8 +14,16 @@ export class ShortnerRepository {
     return this.repo.findOne({ where: { shortCode } });
   }
 
-  async createUrl(originalUrl: string, shortCode: string): Promise<UrlEntity> {
-    const url = this.repo.create({ originalUrl, shortCode });
+  async createUrl(
+    originalUrl: string,
+    shortCode: string,
+    expiresAt?: string | Date | null,
+  ): Promise<UrlEntity> {
+    const url = this.repo.create({
+      originalUrl,
+      shortCode,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+    });
     return this.repo.save(url);
   }
 

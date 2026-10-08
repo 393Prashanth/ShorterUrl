@@ -1,13 +1,15 @@
-﻿import {
+import {
   Injectable,
   ConflictException,
   NotFoundException,
+  GoneException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { nanoid } from 'nanoid';
-import { ShortnerRepository } from '../repositories/shortner.repository';
-import { UrlEntity } from '../entities/url.entity';
-import { CreateUrlDto } from '../dto/create-url.dto';
+import { ShortnerRepository } from '../../../db/repositories';
+import { UrlEntity } from '../../../db/entities';
+import { CreateUrlDto } from '../../../definitions/dto/request';
+import { UrlResponse } from '../../../definitions/dto/response';
 
 @Injectable()
 export class ShortnerService {
@@ -22,8 +24,8 @@ export class ShortnerService {
   }
 
   // 1. Create Short URL
-  async shortenUrl(dto: CreateUrlDto) {
-    const { originalUrl, customSlug } = dto;
+  async shortenUrl(dto: CreateUrlDto): Promise<UrlResponse> {
+    const { originalUrl, customSlug, expiresAt } = dto;
     const code = customSlug ? customSlug.trim() : nanoid(6);
 
     const existing = await this.shortnerRepository.findByShortCode(code);
@@ -33,7 +35,11 @@ export class ShortnerService {
       );
     }
 
-    const record = await this.shortnerRepository.createUrl(originalUrl, code);
+    const record = await this.shortnerRepository.createUrl(
+      originalUrl,
+      code,
+      expiresAt,
+    );
     return this.formatResponse(record);
   }
 
@@ -44,18 +50,26 @@ export class ShortnerService {
       throw new NotFoundException(`Short link '${code}' not found`);
     }
 
+    if (!record.isActive) {
+      throw new GoneException('This short link is no longer active');
+    }
+
+    if (record.expiresAt && new Date() > new Date(record.expiresAt)) {
+      throw new GoneException('This short link has expired');
+    }
+
     await this.shortnerRepository.incrementClicks(record.id);
     return record.originalUrl;
   }
 
   // 3. List All URLs
-  async getAllUrls() {
+  async getAllUrls(): Promise<UrlResponse[]> {
     const records = await this.shortnerRepository.findAll();
     return records.map((record) => this.formatResponse(record));
   }
 
   // 4. Get Stats for Single URL
-  async getStats(code: string) {
+  async getStats(code: string): Promise<UrlResponse> {
     const record = await this.shortnerRepository.findByShortCode(code);
     if (!record) {
       throw new NotFoundException(`Short link '${code}' not found`);
@@ -64,7 +78,7 @@ export class ShortnerService {
   }
 
   // 5. Delete URL
-  async deleteUrl(id: string) {
+  async deleteUrl(id: string): Promise<{ message: string }> {
     const deleted = await this.shortnerRepository.deleteById(id);
     if (!deleted) {
       throw new NotFoundException(`URL with id '${id}' not found`);
@@ -72,7 +86,7 @@ export class ShortnerService {
     return { message: 'URL deleted successfully' };
   }
 
-  private formatResponse(record: UrlEntity) {
+  private formatResponse(record: UrlEntity): UrlResponse {
     return {
       ...record,
       shortUrl: `${this.baseUrl}/${record.shortCode}`,

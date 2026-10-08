@@ -1,4 +1,4 @@
-﻿import {
+import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -26,4 +26,10 @@ export class UrlEntity {
 
   @Column({ name: 'last_accessed', type: 'timestamp', nullable: true })
   lastAccessed: Date | null;
+
+  @Column({name:'expires_at', type:'timestamp', nullable:true})
+  expiresAt: Date | null;
+
+  @Column({name:'is_active', type:'boolean', default:true})
+  isActive: boolean;
 }

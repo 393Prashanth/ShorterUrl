@@ -1,9 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { CoreModule } from '../core/core.module';
-import { ShortnerController } from './controllers/shortner.controller';
+import { DbModule } from '../db/db.module';
+import { ShortnerController } from './v1/shortner/shortner.controller';
+import { RedirectController } from './redirect.controller';
 
 @Module({
-  imports: [CoreModule],
-  controllers: [ShortnerController],
+  imports: [CoreModule, DbModule],
+  controllers: [ShortnerController, RedirectController],
 })
 export class ApiModule {}
