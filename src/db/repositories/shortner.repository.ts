@@ -14,6 +14,10 @@ export class ShortnerRepository {
     return this.repo.findOne({ where: { shortCode } });
   }
 
+  async findById(id: string): Promise<UrlEntity | null> {
+    return this.repo.findOne({ where: { id } });
+  }
+
   async createUrl(
     originalUrl: string,
     shortCode: string,
@@ -30,6 +34,13 @@ export class ShortnerRepository {
   async incrementClicks(id: string): Promise<void> {
     await this.repo.update(id, {
       clicks: () => 'clicks + 1',
+      lastAccessed: new Date(),
+    });
+  }
+
+  async incrementClicksBy(id: string, count: number): Promise<void> {
+    await this.repo.update(id, {
+      clicks: () => `clicks + ${count}`,
       lastAccessed: new Date(),
     });
   }

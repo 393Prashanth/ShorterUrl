@@ -18,7 +18,7 @@ export class CreateUrlDto {
    */
   @IsNotEmpty({ message: 'Destination URL is required' })
   @IsUrl(
-    { require_protocol: true },
+    { require_protocol: true, protocols: ['http', 'https'] },
     { message: 'Destination URL must include http:// or https://' },
   )
   originalUrl: string;

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlEntity } from './entities';
 import { ShortnerRepository } from './repositories';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -17,12 +18,13 @@ import { ShortnerRepository } from './repositories';
         password: config.get<string>('PGPASSWORD', ''),
         database: config.get<string>('PGDATABASE', 'shortner_db'),
         entities: [UrlEntity],
-        synchronize: true,
+        synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
     }),
     TypeOrmModule.forFeature([UrlEntity]),
+    RedisModule,
   ],
   providers: [ShortnerRepository],
-  exports: [TypeOrmModule, ShortnerRepository],
+  exports: [TypeOrmModule, ShortnerRepository, RedisModule],
 })
 export class DbModule {}
