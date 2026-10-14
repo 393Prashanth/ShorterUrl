@@ -65,6 +65,7 @@ export class ShortnerService implements OnModuleInit, OnModuleDestroy {
           code,
           expiresAt,
         );
+        await this.redisService.del(`url:${code}`);
         return this.formatResponse(record);
       } catch (error: unknown) {
         if (
@@ -96,6 +97,7 @@ export class ShortnerService implements OnModuleInit, OnModuleDestroy {
           code,
           expiresAt,
         );
+        await this.redisService.del(`url:${code}`);
         return this.formatResponse(record);
       } catch (error: unknown) {
         if (
@@ -144,7 +146,7 @@ export class ShortnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   // 3. List All URLs with pagination
-  async getAllUrls(page: number = 1, limit: number = 20) {
+  async getAllUrls(page: number = 1, limit: number = 10) {
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(100, Math.max(1, limit));
 
